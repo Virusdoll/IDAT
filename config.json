@@ -1,0 +1,22 @@
+{
+    "input_path": "./test.jpg",
+    "output_path": "./test_result/",
+    "job": [
+        [{"func": "h", "times": 1}],
+        [{"func": "c", "times": 3, "w_p": 0.5, "h_p": 0.5}],
+        [{"func": "r", "times": 1, "min": -90, "max": 90}],
+        [{"func": "g", "times": 1}],
+        [
+            {"func": "bu", "times": 1, "min": 1, "max": 2},
+            {"func": "bd", "times": 1, "min": 0, "max": 1}
+        ],
+        [
+            {"func": "cu", "times": 1, "min": 1, "max": 2},
+            {"func": "cd", "times": 1, "min": 0, "max": 1}
+        ],
+        [
+            {"func": "su", "times": 1, "min": 1, "max": 2},
+            {"func": "sd", "times": 1, "min": 0, "max": 1}
+        ]
+    ]
+}
