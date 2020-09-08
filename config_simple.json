@@ -1,0 +1,12 @@
+{
+    "input_path": "./test_folder/",
+    "output_path": "./test_result/",
+    "job": [
+        [
+            {"func": "h", "times": 1}
+        ],
+        [
+            {"func": "c", "times": 3, "w_p": 0.7, "h_p": 0.7}
+        ]
+    ]
+}

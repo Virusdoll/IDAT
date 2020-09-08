@@ -1,7 +1,9 @@
 from PIL import Image as Image
 from torchvision import transforms as transforms
+import shutil
 import json
 import os
+import sys
 
 class MyCrop(object):
     '''
@@ -14,15 +16,12 @@ class MyCrop(object):
     def __call__(self, img):
         img_w = img.size[0]
         img_h = img.size[1]
-        crop_w = (int)(w_p * img_w)
-        crop_h = (int)(h_p * img_h)
+        crop_w = (int)(self.w_p * img_w)
+        crop_h = (int)(self.h_p * img_h)
         output_img = transforms.RandomCrop(size=(crop_h, crop_w))(img)
         return output_img
 
 class IDAT(object):
-    '''
-    该类用于数据增强
-    '''
 
     def __init__(self):
         # 待保存数据列表(即处理完成的数据列表)
@@ -30,7 +29,10 @@ class IDAT(object):
         # 进行一次tf处理后的暂存数据列表
         self.tmp_list = []
         # tf处理列表
-        self.job_list = []
+        self.job_list = None
+
+    def __call__(self, config_path):
+        self.main_work(config_path)
 
     def load_config(self, config_path):
         
@@ -40,16 +42,20 @@ class IDAT(object):
         self.input_path = config.get('input_path')
         self.output_path = config.get('output_path')
         
+        tmp_job_list = []
         for parallel_job in config.get('job'):
             parallel_job_list = []
             for job in parallel_job:
+                # config -> function
                 parallel_job_list.append(self.choose_job(job))
-            self.job_list.append(parallel_job_list)
+            tmp_job_list.append(parallel_job_list)
+
+        self.job_list = tmp_job_list
 
     def choose_job(self, job):
         func = job.get('func')
         times = job.get('times')
-        tf = ''
+        tf = None
 
         if func == 'h':
             tf = transforms.RandomHorizontalFlip(p=1)
@@ -119,7 +125,7 @@ class IDAT(object):
             result.get('image').save(
                 os.path.join(
                     save_path,
-                    result.get('name') + '.jpg'
+                    '{}.jpg'.format(result.get('name'))
                 )
             )
 
@@ -127,13 +133,30 @@ class IDAT(object):
         self.result_list = []
 
     def main_work(self, config_path):
+        # load config
         self.load_config(config_path)
 
-        # 载入配置
+        # check output path
+        if os.path.exists(self.output_path):
+            raise Exception('path "{}" exists !'.format(self.output_path))
+            return
 
-        # 执行操作
-
+        # is file
+        if os.path.isfile(self.input_path):
+            os.mkdir(self.output_path)
+            self.process_single_image(self.input_path, self.output_path)
+        
+        # is dir
+        if os.path.isdir(self.input_path):
+            # copy all dirs and files
+            shutil.copytree(self.input_path, self.output_path)
+            # process all files
+            for root, dirs, files in os.walk(self.output_path):
+                for file_name in files:
+                    self.process_single_image(
+                        os.path.join(root, file_name),
+                        root
+                    )
 
 if __name__ == "__main__":
-    idat = IDAT()
-    idat.main_work('./config.json')
+    IDAT()(sys.argv[1])
