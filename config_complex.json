@@ -1,6 +1,7 @@
 {
     "input_path": "./test_folder",
     "output_path": "./test_result/",
+    "resize_limit": 1000,
     "job": [
         [
             {"func": "h", "times": 1}

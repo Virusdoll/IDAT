@@ -42,6 +42,7 @@ class IDAT(object):
         
         self.input_path = config.get('input_path')
         self.output_path = config.get('output_path')
+        self.resize_limit = config.get('resize_limit')
         
         tmp_job_list = []
         for parallel_job in config.get('job'):
@@ -98,6 +99,16 @@ class IDAT(object):
         base_image = Image.open(image_path).convert('RGB')
         base_name = os.path.basename(image_path).split('.')[0]
 
+        max_length = base_image.size[0]
+        if base_image.size[1] > max_length:
+            max_length = base_image.size[1]
+        if max_length > self.resize_limit:
+            resize_p = self.resize_limit / max_length
+            base_image = transforms.Resize((
+                int(base_image.size[1] * resize_p),
+                int(base_image.size[0] * resize_p)
+            ))(base_image)
+
         self.result_list.append({
             'image': base_image,
             'name': base_name
@@ -120,6 +131,9 @@ class IDAT(object):
                         })
             self.result_list.extend(self.tmp_list)
             self.tmp_list = []
+        
+        # delete base image
+        os.remove(image_path)
 
         # 保存结果
         for result in self.result_list:
@@ -146,49 +160,57 @@ class IDAT(object):
         # check output path
         if os.path.exists(self.output_path):
             raise Exception('path "{}" exists !'.format(self.output_path))
-            return
 
+        is_file = os.path.isfile(self.input_path)
+        is_dir = os.path.isdir(self.input_path)
+
+        if not (is_file or is_dir):
+            raise Exception('input path error')
+        
+        # copy all dirs and files
+        print('copy files and dirs')
+        
         # is file
-        if os.path.isfile(self.input_path):
+        if is_file:
             os.mkdir(self.output_path)
-            self.process_single_image(self.input_path, self.output_path)
+            shutil.copy(self.input_path, self.output_path)
         
         # is dir
-        if os.path.isdir(self.input_path):
-            # copy all dirs and files
-            print('copy files and dirs')
+        if is_dir:    
             shutil.copytree(self.input_path, self.output_path)
 
-            # count image number
-            total = 0
-            for root, dirs, files in os.walk(self.output_path):
-                total += len(files)
+        # count image number
+        total = 0
+        for root, dirs, files in os.walk(self.output_path):
+            total += len(files)
 
-            # set count
-            count = 0
+        # process all files
+        print('start processing')
+        file_path_list = []
+        
+        for root, dirs, files in os.walk(self.output_path):
+            for file_name in files:
+                file_path_list.append([os.path.join(root, file_name), root])
+        
+        # set count
+        count = 0
+        
+        # start time
+        start_time = time.time()
+        
+        for file_path in file_path_list:
+            self.process_single_image(file_path[0], file_path[1])
 
-            # start time
-            start_time = time.time()
-
-            # process all files
-            print('start processing')
-            for root, dirs, files in os.walk(self.output_path):
-                for file_name in files:
-                    self.process_single_image(
-                        os.path.join(root, file_name),
-                        root
-                    )
-
-                    count += 1
-                    cost_time = time.time() - start_time
-                    eta_time = cost_time * (total - count) / count
-                    c_h, c_m, c_s = self.seconds_to_time(cost_time)
-                    e_h, e_m, e_s = self.seconds_to_time(eta_time)
-                    print('\rfinish {}/{}({:.2f}%), cost {:.0f}:{:.0f}:{:.2f}, eta {:.0f}:{:.0f}:{:.2f}'.format(
-                        count, total, count/total*100, c_h, c_m, c_s, e_h, e_m, e_s
-                    ), end='')
-            
-            print('\nfinish')
+            count += 1
+            cost_time = time.time() - start_time
+            eta_time = cost_time * (total - count) / count
+            c_h, c_m, c_s = self.seconds_to_time(cost_time)
+            e_h, e_m, e_s = self.seconds_to_time(eta_time)
+            print('\rfinish {}/{}({:.2f}%), cost {:.0f}:{:.0f}:{:.2f}, eta {:.0f}:{:.0f}:{:.2f}'.format(
+                count, total, count/total*100, c_h, c_m, c_s, e_h, e_m, e_s
+            ), end='')
+        
+        print('\nfinish')
 
 if __name__ == "__main__":
     IDAT()(sys.argv[1])
