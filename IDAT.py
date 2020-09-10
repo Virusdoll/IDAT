@@ -4,6 +4,7 @@ import shutil
 import json
 import os
 import sys
+import time
 
 class MyCrop(object):
     '''
@@ -94,7 +95,7 @@ class IDAT(object):
   
     def process_single_image(self, image_path, save_path):
 
-        base_image = Image.open(image_path)
+        base_image = Image.open(image_path).convert('RGB')
         base_name = os.path.basename(image_path).split('.')[0]
 
         self.result_list.append({
@@ -132,8 +133,14 @@ class IDAT(object):
         # 清空list
         self.result_list = []
 
+    def seconds_to_time(self, seconds):
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return [h, m, s]
+
     def main_work(self, config_path):
         # load config
+        print('load config')
         self.load_config(config_path)
 
         # check output path
@@ -149,14 +156,39 @@ class IDAT(object):
         # is dir
         if os.path.isdir(self.input_path):
             # copy all dirs and files
+            print('copy files and dirs')
             shutil.copytree(self.input_path, self.output_path)
+
+            # count image number
+            total = 0
+            for root, dirs, files in os.walk(self.output_path):
+                total += len(files)
+
+            # set count
+            count = 0
+
+            # start time
+            start_time = time.time()
+
             # process all files
+            print('start processing')
             for root, dirs, files in os.walk(self.output_path):
                 for file_name in files:
                     self.process_single_image(
                         os.path.join(root, file_name),
                         root
                     )
+
+                    count += 1
+                    cost_time = time.time() - start_time
+                    eta_time = cost_time * (total - count) / count
+                    c_h, c_m, c_s = self.seconds_to_time(cost_time)
+                    e_h, e_m, e_s = self.seconds_to_time(eta_time)
+                    print('\rfinish {}/{}({:.2f}%), cost {:.0f}:{:.0f}:{:.2f}, eta {:.0f}:{:.0f}:{:.2f}'.format(
+                        count, total, count/total*100, c_h, c_m, c_s, e_h, e_m, e_s
+                    ), end='')
+            
+            print('\nfinish')
 
 if __name__ == "__main__":
     IDAT()(sys.argv[1])
