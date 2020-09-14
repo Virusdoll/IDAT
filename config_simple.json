@@ -1,7 +1,8 @@
 {
     "input_path": "./test_folder/",
     "output_path": "./test_result/",
-    "resize_limit": 1000,
+    "resize_limit": 512,
+    "multi_process": -1,
     "job": [
         [
             {"func": "h", "times": 1}
