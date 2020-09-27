@@ -180,7 +180,7 @@ class IDAT(object):
                         for times in range(job_times):
                             tmp_list.append({
                                 'image'     : job_tf(result_image),
-                                'name'      : '{}_{}'.format(result_name, job_func),
+                                'name'      : '{}_{}{}'.format(result_name, job_func, job_times),
                                 'job_number': job_number
                             })
             
